@@ -1,4 +1,6 @@
+import java.util.HashMap;
 public class Entry {
+
     public static void main(String[] args){
 
     }
@@ -7,31 +9,20 @@ public class Entry {
 *
 *
 * */
-class Queue{
-    private int capacity;
-    private int head=0;
-    private int tail=0;
-    String[] queue;
-    public Queue(int cap){
-        this.capacity = cap;
-        queue = new String[cap];
-    }
-    public boolean inQueue(String x){
-        if((tail + 1)%capacity == head){
-            return false;
-        }else{
-            queue[tail] = x;
-            tail = (tail + 1) % capacity;
-            return true;
+
+class Test{
+    public int[] twoSum(int[] nums, int target){
+        HashMap<Integer, Integer> map = new HashMap<Integer, Integer>();
+        int find;
+        for(int i=0; i<nums.length; i++){
+            map.put(nums[i], i);
         }
-    }
-    public String deQueue(){
-        if(head == tail){
-            return null;
+        for(int i=0; i<nums.length; i++){
+            find = target - nums[i];
+            if(map.containsKey(find) && map.get(find) != i){
+                return new int[] {i, map.get(find)};
+            }
         }
-        String tmp = queue[head];
-        queue[head] = null;
-        head = (head + 1) % capacity;
-        return tmp;
+        throw new IllegalArgumentException("no");
     }
 }
