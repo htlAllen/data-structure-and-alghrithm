@@ -18,9 +18,9 @@
 
 由于移动数据将会导致内存中大量数组的变动，导致性能下降，所以一般会选择使用循环队列的方式。
 
-### 最基本的实现方式
-![avatar](../pictures/queue/1.jpg)
+![avatar](../pictures/queue/2.jpg)
 
+### 最基本的实现方式
 ```java
 class Queue{
     private int capacity;
@@ -49,9 +49,9 @@ class Queue{
     }
 }
 ```
-如上图和代码所示，采用这种方式时，会出现队列没有空，但程序确判断为空的伪空情况
+
 ### 伪空解决之移动数据
-![avatar](../pictures/queue/2.jpg)
+
 ```java
 class Queue{
     private int capacity;
