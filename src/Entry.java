@@ -1,3 +1,5 @@
+import javafx.util.Pair;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -6,9 +8,10 @@ import java.util.HashSet;
 public class Entry {
 
     public static void main(String[] args){
-        int[] x = {2,4,1,5,6};
-        Arrays.sort(x);
-        System.out.println(Arrays.toString(x));
+        int[] x = {8, 11, 19, 23, 30, 30, 30, 37};
+        Test y = new Test();
+        System.out.println(y.binearSearch(x, 20));
+
     }
 }
 /*
@@ -17,36 +20,27 @@ public class Entry {
 * */
 
 class Test{
-    public List<List<Integer>> threeSum(int[] nums) {
-        List<List<Integer>> res = new ArrayList<>();
-        // 排好序了，从小到大
+    public int binearSearch(int nums[], int target) {
+        int mid, low, high;
+        low = 0;
+        high = nums.length - 1;
         Arrays.sort(nums);
-        int L, R;
-        int pre=-1000;
-        for(int i=0; i<nums.length-2; i++){
-            if(nums[i] > 0){
-                break;
-            }
-            if(pre == nums[i]){
-                continue;
-            }
-            L = i+1;
-            R = nums.length - 1;
-            while(L < R){
-                if(nums[i] + nums[L] + nums[R] == 0){
-                    res.add(Arrays.asList(nums[i], nums[L], nums[R]));
-                    L++;
-                    R--;
-                } else if(nums[i] + nums[L] + nums[R] > 0){
-                    R--;
+        // 此处需要等号，当有等号时，mid可以取到下标为high（low）的值，若没有等会将会取不到该值，就会出现漏找的情况
+        while (low <= high) {
+            // 取中间值可以优化
+            // mid = low + ((high - low) >> 1);
+            mid = (low + high) / 2;
+            if (nums[mid] <= target) {
+                if(nums[mid+1] <= target){
+                    low = mid + 1;
                 }else{
-                    L++;
+                    return mid;
                 }
+
+            } else {
+                high = mid - 1;
             }
-            pre = nums[i];
         }
-        // 程序结果：[[-1,-1,2],[-1,0,1],[-1,0,1]]
-        // 正确结果：[[-1,-1,2],[-1,0,1]]
-        return res;
+        return -1;
     }
 }
