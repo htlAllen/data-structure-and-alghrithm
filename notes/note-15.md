@@ -31,8 +31,8 @@ class Backtrack{
 ```
 
 ## 实例
-- [0-1背包问题]()
-- [全排列]()
-- [数独]()
-- [八皇后]()
-- [电话号码的字符组合]()
+- [0-1背包](https://github.com/htlAllen/data-structure-and-alghrithm/blob/master/notes/note-16.md)
+- [数独](https://github.com/htlAllen/data-structure-and-alghrithm/blob/master/notes/note-14.md)
+- [八皇后](https://github.com/htlAllen/data-structure-and-alghrithm/blob/master/notes/note-13.md)
+- [全排列](https://github.com/htlAllen/data-structure-and-alghrithm/blob/master/notes/note-11.md)
+- [电话号码的数字组合](https://github.com/htlAllen/data-structure-and-alghrithm/blob/master/notes/note-10.md)
