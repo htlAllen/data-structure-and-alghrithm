@@ -1,10 +1,9 @@
 # 快速认识线程
-## 1.线程的生命周期
+###  1.线程的生命周期
 见图
-## 2.Thread类的start方法
-在调用start方法的时候，首先会处理线程相关的逻辑事务，比如将线程从new状态转变为runnable状态，将线程加入到就绪队列中
-然后在调用JNI的start0()，该方法先检查是否有runnable对象，如果有则调用该对象的run方法，如果没有则会调用自己所重写的run方法
-## 3以下三种创建线程的联系和区别
+###  2.Thread类的start方法
+在调用start方法的时候，首先会处理线程相关的逻辑事务，比如将线程从new状态转变为runnable状态，将线程加入到就绪队列中,然后再调用JNI的start0()，该方法先检查是否有runnable对象，如果有则调用该对象的run方法，如果没有则会调用自己所重写的run方法
+###  3.以下三种创建线程的联系和区别
 ```java
 package yangyi.concurrency.charpter01;
 
@@ -45,7 +44,7 @@ class TicketWindow1 extends Thread{
 
 class TicketWindow2 extends Thread{
     private String name;
-    private static int index = 1;
+    private static int index = 1; // 相比于TicketWindow1，此时在index面前加了index
     private final static int MAX = 50;
     public TicketWindow2(String name){
         this.name = name;
