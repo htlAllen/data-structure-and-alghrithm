@@ -1,8 +1,63 @@
 # 快速认识线程
 ###  1.线程的生命周期
-见图
+![](../../pictures/concurrency/1.jpg)
 ###  2.Thread类的start方法
+> public synchronized void start()
+>
+> ---解释--> 
+>
+> Causes this thread to begin execution; the Java Virtual Machine calls the run method of this thread.
+
 在调用start方法的时候，首先会处理线程相关的逻辑事务，比如将线程从new状态转变为runnable状态，将线程加入到就绪队列中,然后再调用JNI的start0()，该方法先检查是否有runnable对象，如果有则调用该对象的run方法，如果没有则会调用自己所重写的run方法
+```java
+class Thread{
+    public synchronized void start() {
+        /**
+         * This method is not invoked for the main method thread or "system"
+         * group threads created/set up by the VM. Any new functionality added
+         * to this method in the future may have to also be added to the VM.
+         *
+         * A zero status value corresponds to state "NEW".
+         */
+        if (threadStatus != 0)
+            throw new IllegalThreadStateException();
+
+        /* Notify the group that this thread is about to be started
+         * so that it can be added to the group's list of threads
+         * and the group's unstarted count can be decremented. */
+        group.add(this);
+
+        boolean started = false;
+        try {
+            // start0是一个JNI方法，会使得JVM调用类的run方法。
+            start0();
+            started = true;
+        } finally {
+            try {
+                if (!started) {
+                    group.threadStartFailed(this);
+                }
+            } catch (Throwable ignore) {
+                /* do nothing. If start0 threw a Throwable then
+                  it will be passed up the call stack */
+            }
+        }
+    }
+
+    private native void start0();
+    // target是一个Runnable对象
+    private Runnable target;
+    @Override
+    public void run() {
+        // 如果传递给该类一个Runnable接口，则调用该对象的run方法。
+        // 否则，Thread对象自己重写run方法
+        // 都是重写runnable接口的run方法
+        if (target != null) {
+                target.run();
+            }
+        }
+}
+```
 ###  3.以下三种创建线程的联系和区别
 ```java
 package yangyi.concurrency.charpter01;
