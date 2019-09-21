@@ -1,298 +1,164 @@
-# 线程同步与线程安全之sycchronized关键字
-synchronized methods enable a simple strategy for preventing thread interference and memory consistency errors: if an object is visible to more than one thread, all reads or writes to that object's variables are done through synchronized methods. (An important exception: final fields, which cannot be modified after the object is constructed, can be safely read through non-synchronized methods, once the object is constructed) This strategy is effective, but can present problems with liveness, as we'll see later in this lesson.
+# Thread的wait()函数和notify()函数
+wait()函数和notify()函数主要用于进程内部线程之间的通信
+### java线程中的BLOCKED，WAITING，TIMED_WAITTING状态
+##### 1 BLOCKED状态
+当一个线程准备进入一个同步代码块的时候，等待获得对象的monitor lock（此时该对象的monitor lock被别的对象获取还没有被释放）的时候的状态称之为BLOCKED状态
+##### 2 WAITING状态
+当一个线程的执行单元调用不带参数的Object对象的wait(),Thread对象的join()方法时，线程进入WAITING状态状态
+##### 3 TIMED_WAITING状态
+当一个线程的执行单元调用带参数的Object对象的wait(),Thread对象的join()，sleep()方法时，线程进入TIMED_WAITING状态状态
+##### 区别与联系
+1. 三种状态都将导致线程释放cpu资源
+2. 三种状态重新获得cpu资源的时机不同（得到cpu资源，不意味获得了monitor lock）
 
-> 简而言之，若代码块或方法由synchronized修饰，则在代码块或者方法中对某一共享资源的修改，对于其他线程是可见的。
-
-**synchronized的核心**：
-1. synchronized提供了一种锁的机制来保证对共享变量的互斥访问，从而防止数据不一致问题
-2. synchronized的moniter enter jvm指令保证数据是从内存中取的，而不是从cpu缓存中取；moniter exit jvm指令保证数据将被存储到内存中，而不是cpu缓存。从而解决cpu缓存问题
-
-### 几个分析工具
-##### jconsole
-##### jstack
+##### demo
 ```java
-import java.lang.*;
-import java.util.concurrent.TimeUnit;
-public class Mutex{
-    private final static Object MUTEX = new Object();
-    public void accessResource(){
-        synchronized (MUTEX){
-            try{
-                TimeUnit.MINUTES.sleep(10);
-            } catch (InterruptedException e){
-                e.printStackTrace();
-            }
+// sleep()方法不会释放monitor lock, wait()方法会释放monitor lock
+public class Entry{
+    public static void sleep(int seconds){
+        try{
+            TimeUnit.SECONDS.sleep(seconds);
+        } catch (InterruptedException e){
+            e.printStackTrace();
         }
     }
     public static void main(String[] args){
-        final Mutex mutex = new Mutex();
-        Thread t1 = new Thread(mutex::accessResource);
-        Thread t2 = new Thread(mutex::accessResource);
-        Thread t3 = new Thread(mutex::accessResource);
+        Object x = new Object();
+        Thread t1 = new Thread(() ->{
+            synchronized(x){
+                try{
+                    // 会释放monitor lock
+                    x.wait(5000);
+                } catch (InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        });
+        Thread t2 = new Thread(()->{
+            synchronized(x){
+                Entry.sleep(5);
+            }
+        });
+        // 进入TIMED_WATTING状态，并且释放锁
+        t1.start();
+        Entry.sleep(1);
+        // 获得锁，并且进入TIMED_WATTING状态
+        t2.start();
+        System.out.println(t1.getState());
+        System.out.println(t2.getState());
+    //    输出
+    //    TIMED_WAITING 
+    //    TIMED_WAITING
+    }
+}
+
+
+public class Entry{
+    public static void sleep(int seconds){
+        try{
+            TimeUnit.SECONDS.sleep(seconds);
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+    public static void main(String[] args){
+        Object x = new Object();
+        Thread t1 = new Thread(() ->{
+            synchronized(x){
+                // 获得monitor lock，睡觉去了，不释放monitor lock
+                Entry.sleep(5);
+            }
+        });
+        Thread t2 = new Thread(()->{
+            synchronized(x){
+                Entry.sleep(5);
+            }
+        });
+        t1.start();
+        Entry.sleep(1);
+        // 等待获得monitor lock
+        t2.start();
+        System.out.println(t1.getState());
+        System.out.println(t2.getState());
+        
+//        输出
+//        TIMED_WAITING
+//        BLOCKED
+    }
+}
+```
+
+### wait()函数
+1. wait方法必须要拥有monitor lock，所以wait方法要在同步方法中执行
+2. wait方法释放cpu资源的同时也会释放对应的monitor lock
+3. wait方法可以通过被其他线程唤醒和设定一定时间自动唤醒的方式来重新去竞争cpu资源（**不意味着获得对应的monitor lock**）
+##### demo
+```java
+public class Entry{
+    public static void sleep(int seconds){
+        try{
+            TimeUnit.SECONDS.sleep(seconds);
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+    }
+    public static void main(String[] args){
+        Object x = new Object();
+        Thread t1 = new Thread(() ->{
+            synchronized(x){
+                try{
+                    x.wait();
+                } catch (InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        });
+        Thread t2 = new Thread(()->{
+            synchronized(x){
+                try{
+                    x.wait();
+                } catch (InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        });
+        Thread t3 = new Thread(()->{
+           synchronized (x){
+               try{
+                   x.wait();
+               } catch (InterruptedException e){
+                   e.printStackTrace();
+               }
+           }
+        });
         t1.start();
         t2.start();
         t3.start();
+        Entry.sleep(1);
+        System.out.println(t1.getState());
+        System.out.println(t2.getState());
+        System.out.println(t3.getState());
+
+//        输出,并没有出现BLOCKED状态
+//        WAITING
+//        WAITING
+//        WAITING
     }
 }
-//"Thread-2" #23 prio=5 os_prio=0 tid=0x00007fe36c191800 nid=0x368e waiting for monitor entry [0x00007fe332dec000]
-//        java.lang.Thread.State: BLOCKED (on object monitor)
-//        at Mutex.accessResource(Mutex.java:8)
-//        - waiting to lock <0x000000067365daf8> (a java.lang.Object)
-//        at Mutex$$Lambda$3/303563356.run(Unknown Source)
-//        at java.lang.Thread.run(Thread.java:748)
-//
-//"Thread-1" #22 prio=5 os_prio=0 tid=0x00007fe36c18f800 nid=0x368d waiting for monitor entry [0x00007fe332eed000]
-//        java.lang.Thread.State: BLOCKED (on object monitor)
-//        at Mutex.accessResource(Mutex.java:8)
-//        - waiting to lock <0x000000067365daf8> (a java.lang.Object)
-//        at Mutex$$Lambda$2/1418481495.run(Unknown Source)
-//        at java.lang.Thread.run(Thread.java:748)
-//
-//"Thread-0" #21 prio=5 os_prio=0 tid=0x00007fe36c18e000 nid=0x368c waiting on condition [0x00007fe332fee000]
-//        java.lang.Thread.State: TIMED_WAITING (sleeping)
-//        at java.lang.Thread.sleep(Native Method)
-//        at java.lang.Thread.sleep(Thread.java:340)
-//        at java.util.concurrent.TimeUnit.sleep(TimeUnit.java:386)
-//        at Mutex.accessResource(Mutex.java:8)
-//        - locked <0x000000067365daf8> (a java.lang.Object)
-//        at Mutex$$Lambda$1/471910020.run(Unknown Source)
-//        at java.lang.Thread.run(Thread.java:748)
-//
-//"Finalizer" #3 daemon prio=8 os_prio=0 tid=0x00007fe36c0b8800 nid=0x3679 in Object.wait() [0x00007fe3383d5000]
-//        java.lang.Thread.State: WAITING (on object monitor)
-//        at java.lang.Object.wait(Native Method)
-//        - waiting on <0x0000000673608ed8> (a java.lang.ref.ReferenceQueue$Lock)
-//        at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:144)
-//        - locked <0x0000000673608ed8> (a java.lang.ref.ReferenceQueue$Lock)
-//        at java.lang.ref.ReferenceQueue.remove(ReferenceQueue.java:165)
-//        at java.lang.ref.Finalizer$FinalizerThread.run(Finalizer.java:216)
-//        
-//"Reference Handler" #2 daemon prio=10 os_prio=0 tid=0x00007fe36c0b4000 nid=0x3678 in Object.wait() [0x00007fe3384d6000]
-//        java.lang.Thread.State: WAITING (on object monitor)
-//        at java.lang.Object.wait(Native Method)
-//        - waiting on <0x0000000673606c00> (a java.lang.ref.Reference$Lock)
-//        at java.lang.Object.wait(Object.java:502)
-//        at java.lang.ref.Reference.tryHandlePending(Reference.java:191)
-//        - locked <0x0000000673606c00> (a java.lang.ref.Reference$Lock)
-//        at java.lang.ref.Reference$ReferenceHandler.run(Reference.java:153)
-```
-##### javap
-```java
-import java.lang.Thread;
-import java.util.concurrent.TimeUnit;
-public class Entry{
-    public static void main(String[] args){
-        Test x = new Test();
-        Thread t1 = new Thread(Test::t1);
-        Thread t2 = new Thread(x::t2);
-        t1.start();
-        t2.start();
-    }
-}
-class Test{
-    public static synchronized void t1(){
-        try{
-            System.out.println("i am method-1");
-            TimeUnit.MINUTES.sleep(10);
-            System.out.println("i am method-1,i am will over");
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-    public void t2(){
-        synchronized (this){
-            try{
-                System.out.println("i am method-2");
-                TimeUnit.MINUTES.sleep(10);
-                System.out.println("i am method-2,i am will over");
-            } catch (InterruptedException e){
-                e.printStackTrace();
-            }
-        }
-    } 
-}
-//[root@compute1 javaproject]# javap -c Test.class
-//Compiled from "Entry.java"
-//class Test {
-//    Test();
-//    Code:
-//            0: aload_0
-//       1: invokespecial #1                  // Method java/lang/Object."<init>":()V
-//            4: return
-//
-//    public static synchronized void t1();
-//    Code:
-//            0: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
-//            3: ldc           #3                  // String i am method-1
-//            5: invokevirtual #4                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
-//            8: getstatic     #5                  // Field java/util/concurrent/TimeUnit.MINUTES:Ljava/util/concurrent/TimeUnit;
-//            11: ldc2_w        #6                  // long 10l
-//            14: invokevirtual #8                  // Method java/util/concurrent/TimeUnit.sleep:(J)V
-//            17: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
-//            20: ldc           #9                  // String i am method-1,i am will over
-//            22: invokevirtual #4                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
-//            25: goto          33
-//            28: astore_0
-//      29: aload_0
-//      30: invokevirtual #11                 // Method java/lang/InterruptedException.printStackTrace:()V
-//            33: return
-//    Exception table:
-//    from    to  target type
-//           0    25    28   Class java/lang/InterruptedException
-//
-//    public void t2();
-//    Code:
-//            0: aload_0
-//       1: dup
-//       2: astore_1
-//       3: monitorenter
-//       4: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
-//            7: ldc           #12                 // String i am method-2
-//            9: invokevirtual #4                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
-//            12: getstatic     #5                  // Field java/util/concurrent/TimeUnit.MINUTES:Ljava/util/concurrent/TimeUnit;
-//            15: ldc2_w        #6                  // long 10l
-//            18: invokevirtual #8                  // Method java/util/concurrent/TimeUnit.sleep:(J)V
-//            21: getstatic     #2                  // Field java/lang/System.out:Ljava/io/PrintStream;
-//            24: ldc           #13                 // String i am method-2,i am will over
-//            26: invokevirtual #4                  // Method java/io/PrintStream.println:(Ljava/lang/String;)V
-//            29: goto          37
-//            32: astore_2
-//      33: aload_2
-//      34: invokevirtual #11                 // Method java/lang/InterruptedException.printStackTrace:()V
-//            37: aload_1
-//      38: monitorexit
-//      39: goto          47
-//              42: astore_3
-//      43: aload_1
-//      44: monitorexit
-//      45: aload_3
-//      46: athrow
-//      47: return
-//    Exception table:
-//    from    to  target type
-//           4    29    32   Class java/lang/InterruptedException
-//           4    39    42   any
-//          42    45    42   any
-//}
 ```
 
-### This Monitor和Class Monitor
-##### this monitor
-当一个对象有两个synchronized方法时，这两个方法锁获得的monitor lock是同一个monitor lock，即this monitor
-```java
-public class Entry{
-    public static void main(String[] args){
-        Test x = new Test();
-        Thread t1 = new Thread(x::t1);
-        Thread t2 = new Thread(x::t2);
-        t1.start();
-        t2.start();
-// 两者并未交替输出，而是串行输出
-// i am method-1
-// i am method-1,i am will over
-// i am method-2
-// i am method-2,i am will over
-    }
-}
-class Test{
-    public void t1(){
-        synchronized (this){
-            try{
-                System.out.println("i am method-1");
-                TimeUnit.SECONDS.sleep(100);
-                System.out.println("i am method-1,i am will over");
-            } catch (InterruptedException e){
-                e.printStackTrace();
-            }
-        }
+### notify()函数
+> waitSet里面存放的是由于wait方法而导致线程进入WAITTING状态的线程
+1. 唤醒waitSet中的一个线程，使得被唤醒的线程去重新竞争cpu资源（若waitSet为空，则什么也不做）
+> waitSet中的线程即使有cpu资源也不会去使用，被唤醒后就会竞争cpu了。
+>
+> 注意：线程虽然被唤醒会去竞争cpu了，即使竞争到了cpu资源，但并不代表就能立即运行，因为还需要monitor lock。
 
-    }
-    public synchronized void t2(){
-        try{
-            System.out.println("i am method-2");
-            TimeUnit.SECONDS.sleep(100);
-            System.out.println("i am method-2,i am will over");
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-}
-```
-##### class monitor
-当一个对象有两个synchronized的静态方法时，这两个方法锁获得的monitor lock是同一个monitor lock，即class monitor
-```java
-public class Entry{
-    public static void main(String[] args){
-        Test x = new Test();
-        Thread t1 = new Thread(Test::t1);
-        Thread t2 = new Thread(Test::t2);
-        t1.start();
-        t2.start();
-// 两者并未交替输出，而是串行输出
-// i am method-1
-// i am method-1,i am will over
-// i am method-2
-// i am method-2,i am will over
-    }
-}
-class Test{
-    public static synchronized void t1(){
-        try{
-            System.out.println("i am method-1");
-            TimeUnit.SECONDS.sleep(10);
-            System.out.println("i am method-1,i am will over");
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-    public static void t2(){
-        synchronized (Test.class){
-            try{
-                System.out.println("i am method-2");
-                TimeUnit.SECONDS.sleep(10);
-                System.out.println("i am method-2,i am will over");
-            } catch (InterruptedException e){
-                e.printStackTrace();
-            }
-        }
-    }
-}
-```
-```java
-public class Entry{
-    public static void main(String[] args){
-        Test x = new Test();
-        Thread t1 = new Thread(Test::t1);
-        Thread t2 = new Thread(x::t2);
-        t1.start();
-        t2.start();
-// 两个方法交替输出，因为一个是this monitor的lock，一个是class monitor的lock
-// i am method-1
-// i am method-2
-// i am method-1,i am will over
-// i am method-2,i am will over
-    }
-}
-class Test{
-    public static synchronized void t1(){
-        try{
-            System.out.println("i am method-1");
-            TimeUnit.SECONDS.sleep(10);
-            System.out.println("i am method-1,i am will over");
-        } catch (InterruptedException e){
-            e.printStackTrace();
-        }
-    }
-    public synchronized void t2(){
-            try{
-                System.out.println("i am method-2");
-                TimeUnit.SECONDS.sleep(10);
-                System.out.println("i am method-2,i am will over");
-            } catch (InterruptedException e){
-                e.printStackTrace();
-            }
-    }
-}
-```
-### 死锁
+### notifyAll()函数
+1. 唤醒waitSet中所有线程，使用这些线程全都会去竞争cpu资源（食堂开放的感觉）
+
+![](../../pictures/concurrency/charpter05/1.jpg)
+
+### 生产者与消费者
+### 自定义锁BooleanLock
 
