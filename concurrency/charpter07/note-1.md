@@ -73,12 +73,23 @@ Set the default handler invoked when a thread abruptly terminates due to an unca
 Returns the default handler invoked when a thread abruptly terminates due to an uncaught exception.
 
 - **getUncaughtExceptionHandler()**
-
--  **private void dispatchUncaughtException(Throwable e)** 
+Returns the default handler invoked when a thread abruptly terminates due to an uncaught exception. If the returned value is null, there is no default.
+- **private void dispatchUncaughtException(Throwable e)** 
 
 Dispatch an uncaught exception to the handler. This method is intended to be called only by the JVM.
 ```java
 class Thread{
+    @FunctionalInterface
+    // Thread类下面有一个UncaughtExceptionHandler接口，里面包含了需要重写的uncaughtException函数
+    public interface UncaughtExceptionHandler {
+        void uncaughtException(Thread t, Throwable e);
+    }
+    // null unless explicitly set
+    private volatile UncaughtExceptionHandler uncaughtExceptionHandler;
+
+    // null unless explicitly set
+    private static volatile UncaughtExceptionHandler defaultUncaughtExceptionHandler;
+
     public static void setDefaultUncaughtExceptionHandler(UncaughtExceptionHandler eh) {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
@@ -108,5 +119,31 @@ class Thread{
         getUncaughtExceptionHandler().uncaughtException(this, e);
     }
 
+}
+public class Entry{
+    public static void main(String[] args){
+        // 该回调函数能够捕捉到异常信息。若在相关group中和当前Thread对象中没有设置回调函数，则将异常的信息重定位到System.err中
+        Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+            System.out.println(t.getState());
+            System.out.println(t.getName() + "occur");
+            e.printStackTrace();
+        });
+        
+        new Thread(()->{
+            try{
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e){
+                e.printStackTrace();
+            }
+            System.out.println(1/0);
+        }).start();
+
+        try{
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e){
+            e.printStackTrace();
+        }
+
+    }
 }
 ```
