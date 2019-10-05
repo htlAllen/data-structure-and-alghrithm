@@ -1,5 +1,7 @@
 # java之反射
-反射指的是java程序在运行时可以得知一个类的自身信息。反射会将一个类中的方法，成员变量都会映射成对应的对象（Field对象，Method对象），这些对象提供了丰富的api来操作类中的成员变量，方法。
+反射提供了一种手段，使得java程序在运行时可以得知一个类自身的信息。
+
+反射会将一个类中的方法，成员变量都会映射成对应的对象（Field对象，Method对象），这些对象提供了丰富的api来操作类中的成员变量，方法。
 ## 1. 静态编译与动态编译的异同
 1. 静态编译不够灵活但是效率高
 2. 动态编译灵活但是效率不是非常高（有点类似c语言中的链接）
@@ -115,5 +117,42 @@ class Xiaomi{
 
 ![](../pictures/others/1.jpg)
 
-## 4. 反射实战（待续）
+## 4. 反射实战
+##### 反射之数据库操作
+```java
+public class User {
+    private int id;
+    private String name;
+    private String pwd;
+    private int age;
+    public int getId() {
+        return id;
+    }
+    public void setId(int id) {
+        this.id = id;
+    }
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+    public String getPwd() {
+        return pwd;
+    }
+    public void setPwd(String pwd) {
+        this.pwd = pwd;
+    }
+    public int getAge() {
+        return age;
+    }
+    public void setAge(int age) {
+        this.age = age;
+    }
+}
+```
+1. 将一个User对象转变成对应的sql语句
+2. 将从sql中查询结果保存到User对象中
+
+[答案](https://mp.weixin.qq.com/s/0fjNYaEWEgxM3F8jZceygw)
 ## 5. 总结（待续）
