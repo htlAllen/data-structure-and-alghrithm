@@ -65,6 +65,7 @@ class Solution {
 ```
 ---
 ```java
+// 相比于上面代码，充分利用了哨兵原则states[0],大大的简化的代码量
 class Solution {
     public int coinChange(int[] coins, int amount) {
         int[] states = new int[amount+1];    // 定义状态矩阵
